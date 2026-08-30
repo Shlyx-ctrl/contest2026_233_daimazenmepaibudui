@@ -370,6 +370,9 @@ static push_config_t push_config = {0};
 /* iGot API 地址 */
 #define IGOT_API_URL "https://push.hwkya.com"
 
+/* PushPlus API 地址 */
+#define PUSHPLUS_API_URL "https://www.pushplus.plus/send"
+
 /* HTTP 请求缓冲区大小 */
 #define HTTP_BUFFER_SIZE 2048
 
@@ -484,6 +487,18 @@ int push_send_notification(const char *title, const char *content, const char *g
         case PUSH_SERVICE_IGOT:
             snprintf(url, sizeof(url), "%s/%s",
                     IGOT_API_URL, push_config.push_key);
+            break;
+
+        case PUSH_SERVICE_PUSHPLUS:
+            /* PushPlus 使用 POST 请求，token 放在 JSON 里 */
+            {
+                cJSON *pp_root = cJSON_Parse(json_body);
+                cJSON_AddStringToObject(pp_root, "token", push_config.push_key);
+                free(json_body);
+                json_body = cJSON_PrintUnformatted(pp_root);
+                cJSON_Delete(pp_root);
+                snprintf(url, sizeof(url), "%s", PUSHPLUS_API_URL);
+            }
             break;
 
         default:

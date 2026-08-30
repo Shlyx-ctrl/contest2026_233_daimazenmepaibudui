@@ -118,9 +118,10 @@ int main(int argc, char *argv[])
     network_comm_init();
 
     /* ===== 初始化手机推送服务 ===== */
-    /* TODO: 替换为你自己的 Bark/iGot key */
-    /* push_init(PUSH_SERVICE_BARK, "your-bark-key-here"); */
-    /* push_init(PUSH_SERVICE_IGOT, "your-igot-key-here"); */
+    /* PushPlus (Android 微信推送) */
+    push_init(PUSH_SERVICE_PUSHPLUS, "1043ad84f9ba4dbb921756173d36277a");
+    /* Bark (iPad iOS 推送) */
+    push_init(PUSH_SERVICE_BARK, "726d1da9c292efcf947a85897c38310f6200a45c60ec8683813ae4d06fe67be9");
 
     /* ===== 注册回调函数 ===== */
     network_set_mqtt_callback(on_mqtt_message_received);

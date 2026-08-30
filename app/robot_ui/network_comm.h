@@ -150,6 +150,7 @@ int send_device_command(const char *device_id, const char *command);
 typedef enum {
     PUSH_SERVICE_BARK,      // Bark (iOS)
     PUSH_SERVICE_IGOT,      // iGot (Android)
+    PUSH_SERVICE_PUSHPLUS,  // PushPlus (Android/iOS, 微信推送)
     PUSH_SERVICE_MAX
 } push_service_t;
 
@@ -163,7 +164,7 @@ typedef struct {
 /**
  * 初始化推送服务
  * @param service  推送服务类型
- * @param key      推送 key (从 Bark/iGot App 获取)
+ * @param key      推送 key (从 Bark/PushPlus 获取)
  * @return 0 成功, -1 失败
  */
 int push_init(push_service_t service, const char *key);
