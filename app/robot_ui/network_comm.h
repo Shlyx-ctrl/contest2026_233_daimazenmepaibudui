@@ -149,7 +149,6 @@ int send_device_command(const char *device_id, const char *command);
 /* 推送服务类型 */
 typedef enum {
     PUSH_SERVICE_BARK,      // Bark (iOS)
-    PUSH_SERVICE_IGOT,      // iGot (Android)
     PUSH_SERVICE_PUSHPLUS,  // PushPlus (Android/iOS, 微信推送)
     PUSH_SERVICE_MAX
 } push_service_t;
