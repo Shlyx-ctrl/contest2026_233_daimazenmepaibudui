@@ -367,9 +367,6 @@ static push_config_t push_config = {0};
 /* Bark API 地址 */
 #define BARK_API_URL "https://api.day.app"
 
-/* iGot API 地址 */
-#define IGOT_API_URL "https://push.hwkya.com"
-
 /* PushPlus API 地址 */
 #define PUSHPLUS_API_URL "https://www.pushplus.plus/send"
 
@@ -482,11 +479,6 @@ int push_send_notification(const char *title, const char *content, const char *g
         case PUSH_SERVICE_BARK:
             snprintf(url, sizeof(url), "%s/%s/ZhiAi",
                     BARK_API_URL, push_config.push_key);
-            break;
-
-        case PUSH_SERVICE_IGOT:
-            snprintf(url, sizeof(url), "%s/%s",
-                    IGOT_API_URL, push_config.push_key);
             break;
 
         case PUSH_SERVICE_PUSHPLUS:
