@@ -117,6 +117,11 @@ int main(int argc, char *argv[])
     /* ===== 初始化网络通信 ===== */
     network_comm_init();
 
+    /* ===== 初始化手机推送服务 ===== */
+    /* TODO: 替换为你自己的 Bark/iGot key */
+    /* push_init(PUSH_SERVICE_BARK, "your-bark-key-here"); */
+    /* push_init(PUSH_SERVICE_IGOT, "your-igot-key-here"); */
+
     /* ===== 注册回调函数 ===== */
     network_set_mqtt_callback(on_mqtt_message_received);
     network_set_ai_command_callback(on_ai_command_received);
