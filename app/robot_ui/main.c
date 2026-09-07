@@ -117,6 +117,9 @@ int main(int argc, char *argv[])
     /* ===== 初始化网络通信 ===== */
     network_comm_init();
 
+    /* ===== 连接 WiFi ===== */
+    wifi_connect("魔王城", "sjmbahczdszjj");
+
     /* ===== 初始化手机推送服务 ===== */
     /* PushPlus (Android 微信推送) */
     push_init(PUSH_SERVICE_PUSHPLUS, "1043ad84f9ba4dbb921756173d36277a");
