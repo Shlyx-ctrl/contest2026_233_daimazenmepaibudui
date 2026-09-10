@@ -296,14 +296,14 @@ int main(int argc, char *argv[])
     robot_ui_init();
 
     /* ===== 添加默认提醒 ===== */
-    touch_ui_add_reminder("Medicine", "08:00");
-    touch_ui_add_reminder("Drink Water", "10:00");
-    touch_ui_add_reminder("Take a Walk", "16:00");
+    touch_ui_add_reminder("吃药", "08:00");
+    touch_ui_add_reminder("喝水", "10:00");
+    touch_ui_add_reminder("散步", "16:00");
 
     /* ===== 设置初始状态 ===== */
     robot_ui_set_status(ROBOT_STATUS_IDLE);
     robot_ui_set_face(ROBOT_FACE_HAPPY);
-    robot_ui_set_ai_reply("Hello! I am ZhiAi.\nHow can I help you?");
+    robot_ui_set_ai_reply("你好！我是智爱陪伴。\n我能为你做些什么?");
 
     /* ===== 显示主菜单 ===== */
     touch_ui_show_menu(MENU_TYPE_MAIN);
