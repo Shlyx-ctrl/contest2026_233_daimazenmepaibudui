@@ -138,10 +138,10 @@ static void on_ai_command_received(const char *action, const char *param)
 static void vad_callback(bool speech_detected, void *user_data)
 {
     if (speech_detected) {
-        printf("[VAD] Speech detected\n");
+        printf("[VAD] 检测到语音\n");
         sm_handle_event(&g_sm_ctx, SM_EVENT_WAKEUP);
     } else {
-        printf("[VAD] Speech ended\n");
+        printf("[VAD] 检测结束\n");
         sm_handle_event(&g_sm_ctx, SM_EVENT_VOICE_COMPLETE);
     }
 }
@@ -172,7 +172,7 @@ static void llm_response_callback(const char *response, void *user_data)
  */
 static void sound_alarm_callback(const char *sound_type, int confidence, void *user_data)
 {
-    printf("[SoundDetect] Alarm: %s (confidence: %d)\n", sound_type, confidence);
+    printf("[SoundDetect] 警告: %s (confidence: %d)\n", sound_type, confidence);
 
     /* 触发报警 */
     robot_ui_show_alarm(sound_type);
@@ -211,7 +211,7 @@ static void on_mqtt_message_received(const char *topic, const char *payload)
     /* 解析 JSON 命令 */
     cJSON *root = cJSON_Parse(payload);
     if (!root) {
-        printf("JSON parse failed\n");
+        printf("JSON解析失败\n");
         return;
     }
 
@@ -229,7 +229,7 @@ static void on_mqtt_message_received(const char *topic, const char *payload)
 /* 主函数 */
 int main(int argc, char *argv[])
 {
-    printf("ZhiAi Companion starting...\n");
+    printf("智爱陪伴启动中...\n");
 
     /* ===== 初始化网络通信 ===== */
     network_comm_init();
@@ -248,11 +248,11 @@ int main(int argc, char *argv[])
     network_set_ai_command_callback(on_ai_command_received);
 
     /* ===== 初始化 AI 模块 (成员二) ===== */
-    printf("Initializing AI modules...\n");
+    printf("初始化AI模块中...\n");
 
     /* 初始化状态机 */
     if (sm_init(&g_sm_ctx) == 0) {
-        printf("State machine initialized\n");
+        printf("状态机初始化成功\n");
     }
 
     /* 初始化音频模块 */
@@ -262,32 +262,32 @@ int main(int argc, char *argv[])
         .bits_per_sample = 16
     };
     if (audio_init(&g_audio_ctx, &audio_config) == 0) {
-        printf("Audio module initialized\n");
+        printf("音频模块初始化成功\n");
         /* 启用 VAD 检测 */
         audio_vad_enable(&g_audio_ctx, vad_callback, NULL);
     }
 
     /* 初始化 LLM 模块 */
     if (llm_init(&g_llm_ctx, NULL) == 0) {
-        printf("LLM module initialized\n");
+        printf("LLM模块初始化成功\n");
     }
 
     /* 初始化声音检测 */
     if (sound_detect_init(&g_sound_ctx) == 0) {
-        printf("Sound detect initialized\n");
+        printf("声音检测初始化成功\n");
         /* 注册报警回调 */
         sound_detect_set_alarm_callback(&g_sound_ctx, sound_alarm_callback, NULL);
     }
 
     /* 初始化主动关怀 */
     if (care_init(&g_care_ctx) == 0) {
-        printf("Care module initialized\n");
+        printf("主动关怀模块初始化成功\n");
         /* 注册提醒回调 */
         care_set_remind_callback(&g_care_ctx, care_remind_callback, NULL);
     }
 
     g_ai_initialized = true;
-    printf("AI modules initialization done\n");
+    printf("AI模块初始化完成\n");
 
     /* ===== 初始化触摸交互 UI（先初始化） ===== */
     touch_ui_init();
@@ -308,7 +308,7 @@ int main(int argc, char *argv[])
     /* ===== 显示主菜单 ===== */
     touch_ui_show_menu(MENU_TYPE_MAIN);
 
-    printf("ZhiAi Companion started!\n");
+    printf("智爱陪伴启动成功！\n");
 
     /* 主循环 */
     while (1) {
