@@ -62,6 +62,13 @@ void touch_ui_clear_reminders(void);
 void touch_ui_vibrate(int duration_ms);
 void touch_ui_play_sound(const char *sound_type);
 
+/* ==================== 功能回调（由 main.c 注册） ==================== */
+typedef void (*voice_chat_start_cb_t)(void *user_data);
+typedef void (*emergency_call_cb_t)(void *user_data);
+
+void touch_ui_set_voice_chat_cb(voice_chat_start_cb_t cb, void *user_data);
+void touch_ui_set_emergency_cb(emergency_call_cb_t cb, void *user_data);
+
 /* ==================== 关怀确认面板 ==================== */
 typedef enum {
     TOUCH_CHECKIN_WAITING = 2,

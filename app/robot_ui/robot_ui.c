@@ -208,7 +208,7 @@ static void create_status_bar(lv_obj_t *parent)
     lbl_status = lv_label_create(bar);
     lv_label_set_text(lbl_status, "[在线]");
     lv_obj_set_style_text_color(lbl_status, lv_color_hex(0x4CAF50), 0);
-    lv_obj_set_style_text_font(lbl_status, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_status, &lv_font_ui_24, 0);
 
     /* 时间标签：从系统时钟（硬件 RTC）读真实时间，并定时刷新。
      *
@@ -225,7 +225,7 @@ static void create_status_bar(lv_obj_t *parent)
      * （这里刻意不加，保持"屏幕上显示的就是 RTC 里的值"，免得排查时对不上）。 */
     lbl_time = lv_label_create(bar);
     lv_obj_set_style_text_color(lbl_time, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(lbl_time, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_time, &lv_font_ui_24, 0);
     ui_clock_refresh();                                      /* 先立刻显示一次 */
     clock_timer = lv_timer_create(ui_clock_timer_cb, 10000, NULL);  /* 每 10 秒刷一次 */
 
@@ -233,7 +233,7 @@ static void create_status_bar(lv_obj_t *parent)
     lv_obj_t *lbl_signal = lv_label_create(bar);
     lv_label_set_text(lbl_signal, "WiFi 100%");
     lv_obj_set_style_text_color(lbl_signal, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(lbl_signal, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_signal, &lv_font_ui_24, 0);
 
     /* 网络状态:由 main 的主循环轮询 network_is_connected() 后刷新，
      * 不在 network_task 里直接改，避免跨任务操作 LVGL。
@@ -242,7 +242,7 @@ static void create_status_bar(lv_obj_t *parent)
     lbl_net = lv_label_create(bar);
     lv_label_set_text(lbl_net, "NET --");
     lv_obj_set_style_text_color(lbl_net, lv_color_hex(0xFFC107), 0);
-    lv_obj_set_style_text_font(lbl_net, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_net, &lv_font_ui_24, 0);
 }
 
 /* ==================== 更新网络状态 ==================== */
@@ -286,7 +286,7 @@ static void create_face_area(lv_obj_t *parent)
     lbl_reminder = lv_label_create(container);
     lv_label_set_text(lbl_reminder, "Hello! I am ZhiAi.");
     lv_obj_set_style_text_color(lbl_reminder, lv_color_hex(0xCCCCCC), 0);
-    lv_obj_set_style_text_font(lbl_reminder, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_reminder, &lv_font_ui_24, 0);
     lv_obj_set_style_pad_top(lbl_reminder, 10, 0);
 
     /* 启动表情动画 - 上下浮动 */
@@ -319,13 +319,13 @@ static void create_ai_reply_area(lv_obj_t *parent)
     lv_obj_t *lbl_icon = lv_label_create(container);
     lv_label_set_text(lbl_icon, "[AI]");
     lv_obj_set_style_text_color(lbl_icon, lv_color_hex(0x4CAF50), 0);
-    lv_obj_set_style_text_font(lbl_icon, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_icon, &lv_font_ui_24, 0);
 
     /* AI 回复内容 */
     lbl_ai_reply = lv_label_create(container);
     lv_label_set_text(lbl_ai_reply, "Hello!\nHow can I help you?");
     lv_obj_set_style_text_color(lbl_ai_reply, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(lbl_ai_reply, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_ai_reply, &lv_font_ui_24, 0);
     lv_label_set_long_mode(lbl_ai_reply, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(lbl_ai_reply, LV_PCT(100));
     lv_obj_set_style_text_align(lbl_ai_reply, LV_TEXT_ALIGN_CENTER, 0);
@@ -351,7 +351,7 @@ static void create_bottom_buttons(lv_obj_t *parent)
     lv_obj_add_event_cb(btn_remind, btn_event_handler, LV_EVENT_CLICKED, (void *)UI_VIEW_REMIND);
     lv_obj_t *lbl_btn1 = lv_label_create(btn_remind);
     lv_label_set_text(lbl_btn1, "Remind");
-    lv_obj_set_style_text_font(lbl_btn1, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_btn1, &lv_font_ui_24, 0);
     lv_obj_center(lbl_btn1);
 
     /* 设置按钮 */
@@ -361,7 +361,7 @@ static void create_bottom_buttons(lv_obj_t *parent)
     lv_obj_add_event_cb(btn_setting, btn_event_handler, LV_EVENT_CLICKED, (void *)UI_VIEW_SETTING);
     lv_obj_t *lbl_btn2 = lv_label_create(btn_setting);
     lv_label_set_text(lbl_btn2, "Setting");
-    lv_obj_set_style_text_font(lbl_btn2, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_btn2, &lv_font_ui_24, 0);
     lv_obj_center(lbl_btn2);
 
     /* 报警按钮 */
@@ -371,7 +371,7 @@ static void create_bottom_buttons(lv_obj_t *parent)
     lv_obj_add_event_cb(btn_alarm, btn_event_handler, LV_EVENT_CLICKED, (void *)UI_VIEW_ALARM);
     lv_obj_t *lbl_btn3 = lv_label_create(btn_alarm);
     lv_label_set_text(lbl_btn3, "报警");
-    lv_obj_set_style_text_font(lbl_btn3, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_btn3, &lv_font_ui_24, 0);
     lv_obj_center(lbl_btn3);
 }
 
@@ -430,14 +430,14 @@ static void create_alarm_screen(void)
     lv_obj_t *text = lv_label_create(scr_alarm);
     lv_label_set_text(text, "紧急");
     lv_obj_set_style_text_color(text, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(text, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(text, &lv_font_ui_24, 0);
     lv_obj_align(text, LV_ALIGN_CENTER, 0, 0);
 
     /* 报警详情 */
     lv_obj_t *detail = lv_label_create(scr_alarm);
     lv_label_set_text(detail, "检测到异常\n已通知家人");
     lv_obj_set_style_text_color(detail, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(detail, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(detail, &lv_font_ui_24, 0);
     lv_obj_align(detail, LV_ALIGN_CENTER, 0, 40);
 
     /* 返回按钮 */
@@ -451,7 +451,7 @@ static void create_alarm_screen(void)
     lv_obj_t *lbl_back = lv_label_create(btn_back);
     lv_label_set_text(lbl_back, "返回");
     lv_obj_set_style_text_color(lbl_back, lv_color_hex(0xF44336), 0);
-    lv_obj_set_style_text_font(lbl_back, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_back, &lv_font_ui_24, 0);
     lv_obj_center(lbl_back);
 
     /* 报警闪烁动画 */
