@@ -1,0 +1,7 @@
+# contest2026_233/app/robot_ui/Kconfig
+
+config LVX_USE_CONTEST2026_233_ZHI_AI
+	bool "ZhiAi Companion - LVGL UI"
+	default n
+	help
+		Enable the LVGL-based robot UI for the ZhiAi elderly care companion.

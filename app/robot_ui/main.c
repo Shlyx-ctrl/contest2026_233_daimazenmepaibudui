@@ -256,6 +256,52 @@ static void care_remind_callback(care_type_t type, const char *message, void *us
     }
 }
 
+/**
+ * 语音聊天回调 - 由触摸菜单 "语音聊天" 按钮触发
+ * 在 LVGL 线程中调用，通过 audio_record_start 启动录音
+ */
+static void voice_chat_handler(void *user_data)
+{
+    audio_context_t *ctx = (audio_context_t *)user_data;
+    printf("[VoiceChat] Starting voice chat\n");
+
+    robot_ui_set_status(ROBOT_STATUS_LISTENING);
+    robot_ui_set_face(ROBOT_FACE_THINKING);
+    robot_ui_set_ai_reply("聆听中...\n请说话。");
+
+    if (g_ai_initialized) {
+        int ret = audio_record_start(ctx, NULL);
+        if (ret == 0) {
+            sm_handle_event(&g_sm_ctx, SM_EVENT_WAKEUP);
+        } else {
+            printf("[VoiceChat] audio_record_start failed: %d\n", ret);
+            robot_ui_set_status(ROBOT_STATUS_IDLE);
+            robot_ui_set_face(ROBOT_FACE_HAPPY);
+            robot_ui_set_ai_reply("录音启动失败\n请重试");
+        }
+    } else {
+        robot_ui_set_ai_reply("AI 模块未就绪");
+    }
+}
+
+/**
+ * 紧急呼叫回调 - 由触摸菜单 "紧急呼叫" 确认后触发
+ * 发送 MQTT 报警 + 手机推送通知
+ */
+static void emergency_call_handler(void *user_data)
+{
+    printf("[Emergency] Sending emergency alarm\n");
+
+    /* MQTT 上报 */
+    report_alarm("emergency", "老人按下紧急呼叫按钮");
+
+    /* 手机推送 */
+    push_send_alarm("emergency", "老人按下紧急呼叫按钮，请立即查看！");
+
+    robot_ui_set_face(ROBOT_FACE_WORRIED);
+    robot_ui_set_ai_reply("已通知家人\n请保持镇静");
+}
+
 /* ==================== MQTT 消息回调处理 ==================== */
 
 /**
@@ -399,6 +445,10 @@ int main(int argc, char *argv[])
 
     /* ===== 初始化触摸交互 UI（须在活动屏 = 主屏之后, 菜单才可见） ===== */
     touch_ui_init();
+
+    /* ===== 注册触摸菜单功能回调 ===== */
+    touch_ui_set_voice_chat_cb(voice_chat_handler, &g_audio_ctx);
+    touch_ui_set_emergency_cb(emergency_call_handler, NULL);
 
     /* ===== 添加默认提醒 ===== */
     touch_ui_add_reminder("吃药", "08:00");
