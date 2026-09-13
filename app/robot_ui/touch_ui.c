@@ -57,6 +57,17 @@ static bool checkin_confirmed = false;
 static checkin_btn_cb_t checkin_cb = NULL;
 static void *checkin_cb_user_data = NULL;
 
+/* 功能回调（由 main.c 注册） */
+static voice_chat_start_cb_t g_voice_chat_cb = NULL;
+static void *g_voice_chat_user_data = NULL;
+static emergency_call_cb_t g_emergency_cb = NULL;
+static void *g_emergency_user_data = NULL;
+
+/* 设置持久化文件路径 */
+#define SETTINGS_FILE_PATH "/data/zhi_ai_settings.dat"
+#define SETTINGS_FILE_MAGIC 0x5A414953  /* "ZAIS" */
+#define SETTINGS_FILE_VERSION 1
+
 /* ==================== 样式定义 ==================== */
 
 /* 老人友好样式 - 大字体、高对比度 */
@@ -97,6 +108,9 @@ static void show_confirm_dialog(const char *title, const char *content,
                                lv_event_cb_t callback);
 static void checkin_btn_fine_handler(lv_event_t *e);
 static void checkin_btn_help_handler(lv_event_t *e);
+static void reminder_delete_event_handler(lv_event_t *e);
+static void settings_save_to_file(void);
+static void settings_load_from_file(void);
 
 /* ==================== 初始化老人友好样式 ==================== */
 static void init_elder_styles(void)
@@ -170,6 +184,9 @@ void touch_ui_init(void)
     /* 获取当前活动屏幕 */
     current_screen = lv_scr_act();
     lv_obj_add_style(current_screen, &style_elder, 0);
+
+    /* 加载持久化设置 */
+    settings_load_from_file();
 
     printf("touch_ui init done\n");
 }
@@ -366,6 +383,22 @@ static void create_reminder_item(lv_obj_t *parent, const char *title,
     lv_label_set_text(title_label, title);
     lv_obj_set_style_text_font(title_label, &lv_font_ui_20, 0);
     lv_obj_set_style_pad_left(title_label, 15, 0);
+
+    /* 右侧删除按钮 "×" */
+    lv_obj_t *del_btn = lv_btn_create(item);
+    lv_obj_set_size(del_btn, 50, 50);
+    lv_obj_set_style_bg_color(del_btn, lv_color_hex(0xF44336), 0);
+    lv_obj_set_style_radius(del_btn, 25, 0);
+    lv_obj_set_style_pad_all(del_btn, 0, 0);
+    lv_obj_align(del_btn, LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_obj_add_event_cb(del_btn, reminder_delete_event_handler,
+                        LV_EVENT_CLICKED, (void *)(intptr_t)index);
+
+    lv_obj_t *del_label = lv_label_create(del_btn);
+    lv_label_set_text(del_label, "x");
+    lv_obj_set_style_text_font(del_label, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_color(del_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_center(del_label);
 }
 
 /* ==================== 创建设置面板 ==================== */
@@ -572,6 +605,46 @@ static void create_back_button(lv_obj_t *parent)
 
 /* ==================== 事件处理函数 ==================== */
 
+/* 紧急呼叫确认对话框回调 */
+static void emergency_confirm_handler(lv_event_t *e)
+{
+    lv_obj_t *btn = lv_event_get_target(e);
+    int action = (int)(intptr_t)lv_event_get_user_data(e);
+
+    lv_obj_t *mbox = lv_obj_get_parent(btn);
+    lv_msgbox_close(mbox);
+
+    if (action == 1 && g_emergency_cb) {
+        printf("[Emergency] User confirmed emergency call\n");
+        touch_ui_show_setting_detail("紧急呼叫", "正在联系家人...\n请稍候");
+        g_emergency_cb(g_emergency_user_data);
+    }
+
+    touch_ui_play_sound("click");
+}
+
+/* 提醒删除按钮回调 */
+static void reminder_delete_event_handler(lv_event_t *e)
+{
+    int index = (int)(intptr_t)lv_event_get_user_data(e);
+
+    if (index < 0 || index >= reminder_count) return;
+
+    printf("[Reminder] Delete: %s %s\n",
+           reminders[index].title, reminders[index].time);
+
+    /* 用最后一项覆盖被删除项 */
+    if (index < reminder_count - 1) {
+        reminders[index] = reminders[reminder_count - 1];
+    }
+    reminder_count--;
+
+    touch_ui_play_sound("back");
+
+    /* 刷新提醒列表 */
+    touch_ui_show_menu(MENU_TYPE_REMIND);
+}
+
 /* 菜单项点击事件 */
 static void menu_item_event_handler(lv_event_t *e)
 {
@@ -583,6 +656,9 @@ static void menu_item_event_handler(lv_event_t *e)
     switch (index) {
         case 0: // 语音聊天
             touch_ui_set_mode(MODE_LISTENING);
+            if (g_voice_chat_cb) {
+                g_voice_chat_cb(g_voice_chat_user_data);
+            }
             break;
         case 1: // 查看提醒
             touch_ui_show_menu(MENU_TYPE_REMIND);
@@ -590,8 +666,10 @@ static void menu_item_event_handler(lv_event_t *e)
         case 2: // 系统设置
             touch_ui_show_menu(MENU_TYPE_SETTING);
             break;
-        case 3: // 紧急联系
-            touch_ui_show_setting_detail("紧急呼叫", "正在联系家人...\n请稍候");
+        case 3: // 紧急联系 - 弹确认框
+            show_confirm_dialog("紧急呼叫",
+                               "确定要紧急联系家人吗？",
+                               emergency_confirm_handler);
             break;
         case 4: // 关于
             touch_ui_show_menu(MENU_TYPE_ABOUT);
@@ -620,6 +698,7 @@ static void setting_slider_event_handler(lv_event_t *e)
     switch (index) {
         case 0: // 音量
             user_settings.volume = value;
+            settings_save_to_file();
             break;
         case 1: // 亮度
             user_settings.brightness = value;
@@ -630,6 +709,7 @@ static void setting_slider_event_handler(lv_event_t *e)
             ret = backlight_set(value);
             if (ret != OK)
                 printf("touch_ui: backlight_set(%d) failed: %d\n", value, ret);
+            settings_save_to_file();
             break;
         default:
             break;
@@ -646,6 +726,7 @@ static void setting_switch_event_handler(lv_event_t *e)
     switch (index) {
         case 2: // 自动提醒
             user_settings.auto_remind = checked;
+            settings_save_to_file();
             break;
         default:
             break;
@@ -678,6 +759,7 @@ static void interval_button_event_handler(lv_event_t *e)
 {
     int interval = (int)(intptr_t)lv_event_get_user_data(e);
     user_settings.remind_interval = interval;
+    settings_save_to_file();
     touch_ui_play_sound("click");
 
     /* 刷新界面以显示新的选中状态 */
@@ -700,6 +782,7 @@ static void confirm_dialog_event_handler(lv_event_t *e)
         user_settings.brightness = 80;
         user_settings.auto_remind = true;
         user_settings.remind_interval = 60;
+        settings_save_to_file();
 
         /* 刷新设置界面 */
         touch_ui_show_menu(MENU_TYPE_SETTING);
@@ -772,9 +855,7 @@ settings_t* touch_ui_get_settings(void)
 /* 保存设置 */
 void touch_ui_save_settings(void)
 {
-    /* TODO: 保存到 Flash/文件系统 */
-    printf("Settings saved: vol=%d, bright=%d\n",
-           user_settings.volume, user_settings.brightness);
+    settings_save_to_file();
 }
 
 /* 显示设置详情 */
@@ -832,6 +913,76 @@ void touch_ui_play_sound(const char *sound_type)
 {
     /* TODO: 播放对应音效 */
     printf("Sound: %s\n", sound_type);
+}
+
+/* ==================== 功能回调注册 ==================== */
+
+void touch_ui_set_voice_chat_cb(voice_chat_start_cb_t cb, void *user_data)
+{
+    g_voice_chat_cb = cb;
+    g_voice_chat_user_data = user_data;
+}
+
+void touch_ui_set_emergency_cb(emergency_call_cb_t cb, void *user_data)
+{
+    g_emergency_cb = cb;
+    g_emergency_user_data = user_data;
+}
+
+/* ==================== 设置持久化 ==================== */
+
+static void settings_save_to_file(void)
+{
+    FILE *fp = fopen(SETTINGS_FILE_PATH, "wb");
+    if (!fp) {
+        printf("settings: save failed to open %s\n", SETTINGS_FILE_PATH);
+        return;
+    }
+
+    uint32_t header[2] = { SETTINGS_FILE_MAGIC, SETTINGS_FILE_VERSION };
+    fwrite(header, sizeof(uint32_t), 2, fp);
+    fwrite(&user_settings, sizeof(settings_t), 1, fp);
+    fclose(fp);
+    printf("settings: saved (vol=%d bright=%d auto=%d interval=%d)\n",
+           user_settings.volume, user_settings.brightness,
+           user_settings.auto_remind, user_settings.remind_interval);
+}
+
+static void settings_load_from_file(void)
+{
+    FILE *fp = fopen(SETTINGS_FILE_PATH, "rb");
+    if (!fp) {
+        printf("settings: no saved file, using defaults\n");
+        return;
+    }
+
+    uint32_t header[2];
+    if (fread(header, sizeof(uint32_t), 2, fp) != 2 ||
+        header[0] != SETTINGS_FILE_MAGIC ||
+        header[1] != SETTINGS_FILE_VERSION) {
+        printf("settings: invalid file header, using defaults\n");
+        fclose(fp);
+        return;
+    }
+
+    settings_t loaded;
+    if (fread(&loaded, sizeof(settings_t), 1, fp) != 1) {
+        printf("settings: read failed, using defaults\n");
+        fclose(fp);
+        return;
+    }
+    fclose(fp);
+
+    /* 校验范围 */
+    if (loaded.volume <= 100 && loaded.brightness <= 100 &&
+        loaded.remind_interval > 0 && loaded.remind_interval <= 720) {
+        user_settings = loaded;
+        printf("settings: loaded (vol=%d bright=%d auto=%d interval=%d)\n",
+               user_settings.volume, user_settings.brightness,
+               user_settings.auto_remind, user_settings.remind_interval);
+    } else {
+        printf("settings: invalid values, using defaults\n");
+    }
 }
 
 /* ==================== 关怀确认面板 ==================== */
