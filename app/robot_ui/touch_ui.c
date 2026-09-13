@@ -27,6 +27,10 @@ static lv_obj_t *menu_panel = NULL;
 static lv_obj_t *setting_panel = NULL;
 static lv_obj_t *reminder_panel = NULL;
 
+/* 右滑手势状态 */
+static int32_t swipe_start_x = 0;
+static bool swipe_tracking = false;
+
 /* 当前状态 */
 static robot_mode_t current_mode = MODE_NORMAL;
 static settings_t user_settings = {
@@ -111,6 +115,7 @@ static void checkin_btn_help_handler(lv_event_t *e);
 static void reminder_delete_event_handler(lv_event_t *e);
 static void settings_save_to_file(void);
 static void settings_load_from_file(void);
+static void screen_gesture_event_handler(lv_event_t *e);
 
 /* ==================== 初始化老人友好样式 ==================== */
 static void init_elder_styles(void)
@@ -184,6 +189,14 @@ void touch_ui_init(void)
     /* 获取当前活动屏幕 */
     current_screen = lv_scr_act();
     lv_obj_add_style(current_screen, &style_elder, 0);
+
+    /* 注册右滑手势：在主屏幕上任意位置向右滑动即可进入主菜单 */
+    lv_obj_add_event_cb(current_screen, screen_gesture_event_handler,
+                        LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(current_screen, screen_gesture_event_handler,
+                        LV_EVENT_RELEASED, NULL);
+    lv_obj_add_event_cb(current_screen, screen_gesture_event_handler,
+                        LV_EVENT_CANCELLED, NULL);
 
     /* 加载持久化设置 */
     settings_load_from_file();
@@ -330,7 +343,7 @@ static void create_menu_item(lv_obj_t *parent, const char *icon_text,
     lv_obj_t *sub_label = lv_label_create(item);
     lv_label_set_text(sub_label, subtitle);
     lv_obj_set_style_text_color(sub_label, lv_color_hex(0x9E9E9E), 0);
-    lv_obj_set_style_text_font(sub_label, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(sub_label, &lv_font_ui_24, 0);
     lv_obj_set_style_pad_left(sub_label, 15, 0);
 
     /* 右箭头 */
@@ -348,7 +361,7 @@ static void create_reminder_list_items(lv_obj_t *parent)
         lv_obj_t *empty = lv_label_create(parent);
         lv_label_set_text(empty, "暂无提醒\n\n点击 + 添加");
         lv_obj_set_style_text_color(empty, lv_color_hex(0x9E9E9E), 0);
-        lv_obj_set_style_text_font(empty, &lv_font_ui_16, 0);
+        lv_obj_set_style_text_font(empty, &lv_font_ui_24, 0);
         lv_obj_set_style_text_align(empty, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_pad_top(empty, 50, 0);
     } else {
@@ -376,12 +389,12 @@ static void create_reminder_item(lv_obj_t *parent, const char *title,
     lv_obj_t *time_label = lv_label_create(item);
     lv_label_set_text(time_label, time_str);
     lv_obj_set_style_text_color(time_label, lv_color_hex(0xFF9800), 0);
-    lv_obj_set_style_text_font(time_label, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(time_label, &lv_font_ui_24, 0);
 
     /* 提醒标题 */
     lv_obj_t *title_label = lv_label_create(item);
     lv_label_set_text(title_label, title);
-    lv_obj_set_style_text_font(title_label, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(title_label, &lv_font_ui_24, 0);
     lv_obj_set_style_pad_left(title_label, 15, 0);
 
     /* 右侧删除按钮 "×" */
@@ -396,7 +409,7 @@ static void create_reminder_item(lv_obj_t *parent, const char *title,
 
     lv_obj_t *del_label = lv_label_create(del_btn);
     lv_label_set_text(del_label, "x");
-    lv_obj_set_style_text_font(del_label, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(del_label, &lv_font_ui_24, 0);
     lv_obj_set_style_text_color(del_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_center(del_label);
 }
@@ -440,7 +453,7 @@ static void create_setting_panel(void)
     lv_obj_add_event_cb(btn_reset, setting_reset_event_handler, LV_EVENT_CLICKED, NULL);
     lv_obj_t *lbl_reset = lv_label_create(btn_reset);
     lv_label_set_text(lbl_reset, "[重] 恢复默认");
-    lv_obj_set_style_text_font(lbl_reset, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl_reset, &lv_font_ui_24, 0);
     lv_obj_center(lbl_reset);
 
     /* 返回按钮 */
@@ -469,12 +482,12 @@ static void create_slider_setting(lv_obj_t *parent, const char *title,
 
     lv_obj_t *title_label = lv_label_create(title_row);
     lv_label_set_text(title_label, title);
-    lv_obj_set_style_text_font(title_label, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(title_label, &lv_font_ui_24, 0);
     lv_obj_set_style_text_color(title_label, lv_color_hex(0xFFFFFF), 0);
 
     lv_obj_t *value_label = lv_label_create(title_row);
     lv_label_set_text_fmt(value_label, "%d%%", value);
-    lv_obj_set_style_text_font(value_label, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(value_label, &lv_font_ui_24, 0);
     lv_obj_set_style_text_color(value_label, lv_color_hex(0x4CAF50), 0);
 
     /* 滑块 */
@@ -502,7 +515,7 @@ static void create_switch_setting(lv_obj_t *parent, const char *title,
     /* 标题 */
     lv_obj_t *title_label = lv_label_create(container);
     lv_label_set_text(title_label, title);
-    lv_obj_set_style_text_font(title_label, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(title_label, &lv_font_ui_24, 0);
     lv_obj_set_style_text_color(title_label, lv_color_hex(0xFFFFFF), 0);
 
     /* 开关 */
@@ -532,7 +545,7 @@ static void create_interval_setting(lv_obj_t *parent, const char *title,
     /* 标题 */
     lv_obj_t *title_label = lv_label_create(container);
     lv_label_set_text(title_label, title);
-    lv_obj_set_style_text_font(title_label, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(title_label, &lv_font_ui_24, 0);
     lv_obj_set_style_text_color(title_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_pad_bottom(title_label, 10, 0);
 
@@ -564,7 +577,7 @@ static void create_interval_setting(lv_obj_t *parent, const char *title,
 
         lv_obj_t *btn_label = lv_label_create(btn);
         lv_label_set_text(btn_label, interval_texts[i]);
-        lv_obj_set_style_text_font(btn_label, &lv_font_ui_16, 0);
+        lv_obj_set_style_text_font(btn_label, &lv_font_ui_24, 0);
         lv_obj_center(btn_label);
     }
 }
@@ -583,7 +596,7 @@ static void create_about_info(lv_obj_t *parent)
         "界面: LVGL\n\n"
         "2026 智爱团队");
     lv_obj_set_style_text_color(info, lv_color_hex(0xCCCCCC), 0);
-    lv_obj_set_style_text_font(info, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(info, &lv_font_ui_24, 0);
     lv_obj_set_style_text_align(info, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_pad_top(info, 20, 0);
 }
@@ -599,7 +612,7 @@ static void create_back_button(lv_obj_t *parent)
 
     lv_obj_t *lbl = lv_label_create(btn);
     lv_label_set_text(lbl, "< 返回");
-    lv_obj_set_style_text_font(lbl, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_ui_24, 0);
     lv_obj_center(lbl);
 }
 
@@ -611,8 +624,14 @@ static void emergency_confirm_handler(lv_event_t *e)
     lv_obj_t *btn = lv_event_get_target(e);
     int action = (int)(intptr_t)lv_event_get_user_data(e);
 
+    /* 向上遍历找到 msgbox 对象 */
     lv_obj_t *mbox = lv_obj_get_parent(btn);
-    lv_msgbox_close(mbox);
+    while (mbox && lv_obj_check_type(mbox, &lv_msgbox_class) == false) {
+        mbox = lv_obj_get_parent(mbox);
+    }
+    if (mbox) {
+        lv_msgbox_close(mbox);
+    }
 
     if (action == 1 && g_emergency_cb) {
         printf("[Emergency] User confirmed emergency call\n");
@@ -772,9 +791,14 @@ static void confirm_dialog_event_handler(lv_event_t *e)
     lv_obj_t *btn = lv_event_get_target(e);
     int action = (int)(intptr_t)lv_event_get_user_data(e);
 
-    /* 关闭对话框 */
+    /* 关闭对话框：通过 btn 向上遍历找到 msgbox 对象 */
     lv_obj_t *mbox = lv_obj_get_parent(btn);
-    lv_msgbox_close(mbox);
+    while (mbox && lv_obj_check_type(mbox, &lv_msgbox_class) == false) {
+        mbox = lv_obj_get_parent(mbox);
+    }
+    if (mbox) {
+        lv_msgbox_close(mbox);
+    }
 
     if (action == 1) { // 确认
         /* 恢复默认设置 */
@@ -810,11 +834,47 @@ static void show_confirm_dialog(const char *title, const char *content,
     lv_obj_center(mbox);
     lv_obj_set_style_bg_color(mbox, lv_color_hex(0x2D2D44), 0);
     lv_obj_set_style_text_color(mbox, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(mbox, &lv_font_ui_16, 0);
+    lv_obj_set_style_text_font(mbox, &lv_font_ui_24, 0);
 
     /* 添加按钮事件 */
     lv_obj_add_event_cb(btn_cancel, callback, LV_EVENT_CLICKED, (void *)(intptr_t)0);
     lv_obj_add_event_cb(btn_confirm, callback, LV_EVENT_CLICKED, (void *)(intptr_t)1);
+}
+
+/* ==================== 右滑手势处理 ==================== */
+
+/* 在主屏幕上检测右滑手势，滑动超过 80px 显示主菜单 */
+static void screen_gesture_event_handler(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if (code == LV_EVENT_PRESSED) {
+        lv_indev_t *indev = lv_indev_get_act();
+        if (indev) {
+            lv_point_t p;
+            lv_indev_get_point(indev, &p);
+            swipe_start_x = p.x;
+            swipe_tracking = true;
+        }
+    }
+    else if (code == LV_EVENT_RELEASED || code == LV_EVENT_CANCELLED) {
+        if (!swipe_tracking) return;
+        swipe_tracking = false;
+
+        lv_indev_t *indev = lv_indev_get_act();
+        if (!indev) return;
+
+        lv_point_t p;
+        lv_indev_get_point(indev, &p);
+        int32_t dx = p.x - swipe_start_x;
+
+        /* 向右滑动超过 80px，显示主菜单 */
+        if (dx > 80) {
+            printf("[Gesture] Swipe right detected (dx=%d), showing main menu\n", (int)dx);
+            touch_ui_play_sound("click");
+            touch_ui_show_menu(MENU_TYPE_MAIN);
+        }
+    }
 }
 
 /* ==================== 公共接口实现 ==================== */
@@ -871,7 +931,7 @@ void touch_ui_show_setting_detail(const char *title, const char *content)
     lv_obj_center(mbox);
     lv_obj_set_style_bg_color(mbox, lv_color_hex(0x2D2D44), 0);
     lv_obj_set_style_text_color(mbox, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(mbox, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(mbox, &lv_font_ui_24, 0);
 }
 
 /* 添加提醒 */
@@ -1058,12 +1118,12 @@ void touch_ui_show_checkin(uint64_t checkin_id, uint32_t timeout_ms,
 
     lv_obj_t *hint = lv_label_create(checkin_panel);
     lv_label_set_text(hint, "您还好吗？请确认状态");
-    lv_obj_set_style_text_font(hint, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(hint, &lv_font_ui_24, 0);
     lv_obj_set_style_text_color(hint, lv_color_hex(0xFFFFFF), 0);
 
     checkin_status_lbl = lv_label_create(checkin_panel);
     lv_label_set_text(checkin_status_lbl, "等待确认");
-    lv_obj_set_style_text_font(checkin_status_lbl, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(checkin_status_lbl, &lv_font_ui_24, 0);
     lv_obj_set_style_text_color(checkin_status_lbl, lv_color_hex(0x4CAF50), 0);
 
     /* "我没事" 按钮 - 绿色 */
@@ -1075,7 +1135,7 @@ void touch_ui_show_checkin(uint64_t checkin_id, uint32_t timeout_ms,
                         LV_EVENT_CLICKED, NULL);
     lv_obj_t *lbl_fine = lv_label_create(checkin_btn_fine);
     lv_label_set_text(lbl_fine, "我没事");
-    lv_obj_set_style_text_font(lbl_fine, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(lbl_fine, &lv_font_ui_24, 0);
     lv_obj_center(lbl_fine);
 
     /* "需要帮助" 按钮 - 红色 */
@@ -1087,7 +1147,7 @@ void touch_ui_show_checkin(uint64_t checkin_id, uint32_t timeout_ms,
                         LV_EVENT_CLICKED, NULL);
     lv_obj_t *lbl_help = lv_label_create(checkin_btn_help);
     lv_label_set_text(lbl_help, "需要帮助");
-    lv_obj_set_style_text_font(lbl_help, &lv_font_ui_20, 0);
+    lv_obj_set_style_text_font(lbl_help, &lv_font_ui_24, 0);
     lv_obj_center(lbl_help);
 
     (void)timeout_ms;
