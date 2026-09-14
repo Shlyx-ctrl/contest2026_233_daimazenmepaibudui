@@ -1048,6 +1048,61 @@ static void volume_set_handler(int volume, void *user_data)
     }
 }
 
+/* ==================== 设备状态回执处理 ==================== */
+
+/* lv_async_call 参数结构（跨线程更新 LVGL） */
+typedef struct {
+    char device_id[32];
+    char state[32];
+    bool success;
+} device_state_arg_t;
+
+/* LVGL 线程中执行的 UI 更新 */
+static void update_device_state_ui(void *arg_ptr)
+{
+    device_state_arg_t *arg = (device_state_arg_t *)arg_ptr;
+
+    if (arg->success) {
+        char msg[128];
+        if (strcmp(arg->state, "on") == 0) {
+            snprintf(msg, sizeof(msg), "%s 已打开", arg->device_id);
+        } else if (strcmp(arg->state, "off") == 0) {
+            snprintf(msg, sizeof(msg), "%s 已关闭", arg->device_id);
+        } else {
+            snprintf(msg, sizeof(msg), "%s 状态: %s", arg->device_id, arg->state);
+        }
+
+        robot_ui_set_face(ROBOT_FACE_HAPPY);
+        robot_ui_set_ai_reply(msg);
+        printf("[DeviceUI] %s\n", msg);
+    } else {
+        robot_ui_set_face(ROBOT_FACE_WORRIED);
+        robot_ui_set_ai_reply("设备控制失败\n请重试");
+        printf("[DeviceUI] control failed\n");
+    }
+
+    free(arg);
+}
+
+/* 设备状态回调（网络线程调用，不能直接操作 LVGL） */
+static void on_device_state_received(const char *device_id, const char *state,
+                                      bool success)
+{
+    printf("[Device] state callback: %s -> %s (%s)\n",
+           device_id, state, success ? "OK" : "FAIL");
+
+    /* 通过 lv_async_call 投递到 LVGL 线程更新界面 */
+    device_state_arg_t *arg = malloc(sizeof(device_state_arg_t));
+    if (arg) {
+        strncpy(arg->device_id, device_id, sizeof(arg->device_id) - 1);
+        arg->device_id[sizeof(arg->device_id) - 1] = '\0';
+        strncpy(arg->state, state, sizeof(arg->state) - 1);
+        arg->state[sizeof(arg->state) - 1] = '\0';
+        arg->success = success;
+        lv_async_call(update_device_state_ui, arg);
+    }
+}
+
 /* ==================== MQTT 消息回调处理 ==================== */
 
 /**
@@ -1341,6 +1396,7 @@ int main(int argc, char *argv[])
     /* ===== 注册回调函数 ===== */
     network_set_mqtt_callback(on_mqtt_message_received);
     network_set_ai_command_callback(on_ai_command_received);
+    network_set_device_state_callback(on_device_state_received);
 
     /* ===== 初始化 AI 模块 (成员二) ===== */
     printf("Initializing AI modules...\n");

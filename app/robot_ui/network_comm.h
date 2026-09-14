@@ -52,6 +52,8 @@ typedef void (*wifi_status_callback_t)(bool connected);
 typedef void (*alarm_callback_t)(const char *alarm_type, const char *details);
 typedef void (*ai_reply_callback_t)(const char *reply);
 typedef void (*ai_command_callback_t)(const char *action, const char *param);
+typedef void (*device_state_callback_t)(const char *device_id, const char *state,
+                                        bool success);
 
 /* ==================== 初始化函数 ==================== */
 int network_comm_init(void);
@@ -85,6 +87,7 @@ void network_set_mqtt_callback(mqtt_msg_callback_t callback);
 void network_set_wifi_callback(wifi_status_callback_t callback);
 void network_set_alarm_callback(alarm_callback_t callback);
 void network_set_ai_command_callback(ai_command_callback_t callback);
+void network_set_device_state_callback(device_state_callback_t callback);
 
 /* ==================== AI 语音交互接口 ==================== */
 
