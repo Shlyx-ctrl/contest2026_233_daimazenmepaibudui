@@ -47,6 +47,7 @@ void touch_ui_go_back(void);
 /* ==================== 模式切换 ==================== */
 void touch_ui_set_mode(robot_mode_t mode);
 robot_mode_t touch_ui_get_mode(void);
+void touch_ui_exit_voice_chat(void);
 
 /* ==================== 设置操作 ==================== */
 settings_t* touch_ui_get_settings(void);

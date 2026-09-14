@@ -325,12 +325,18 @@ void touch_ui_init(void)
     /* 加载持久化设置 */
     settings_load_from_file();
 
+    /* 开机时将保存的亮度下发到面板，避免显示亮度与设置不一致 */
+    backlight_set(user_settings.brightness);
+
     printf("touch_ui init done\n");
 }
 
 /* ==================== 显示菜单 ==================== */
 void touch_ui_show_menu(menu_type_t type)
 {
+    /* 记录当前菜单层级 */
+    current_menu_type = type;
+
     /* 要出菜单了，说明用户已经离开语音聊天：按「×」同样的收尾走一遍
      * （停录音 + 丢弃这一轮），否则会留下一个还在录音、却被菜单盖住的弹窗
      * —— 麦克风被占着，谁也录不了。 */
@@ -547,6 +553,17 @@ static void create_reminder_list_items(lv_obj_t *parent)
             create_reminder_item(parent, items[i].title, time_str, i);
         }
     }
+
+    /* 添加提醒按钮 */
+    lv_obj_t *btn_add = lv_btn_create(parent);
+    lv_obj_set_size(btn_add, LV_PCT(80), 60);
+    lv_obj_set_style_bg_color(btn_add, lv_color_hex(0x4CAF50), 0);
+    lv_obj_set_style_radius(btn_add, 15, 0);
+    lv_obj_add_event_cb(btn_add, add_reminder_confirm_handler, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *lbl_add = lv_label_create(btn_add);
+    lv_label_set_text(lbl_add, "[+] 添加提醒");
+    lv_obj_set_style_text_font(lbl_add, &lv_font_ui_24, 0);
+    lv_obj_center(lbl_add);
 }
 
 /* ==================== 创建提醒项 ==================== */
@@ -1430,12 +1447,24 @@ void touch_ui_set_mode(robot_mode_t mode)
              * 关不掉的框。 */
             break;
         case MODE_SLEEP:
-            /* 降低亮度，显示休眠界面 */
+            /* 降低亮度到 10%，显示休眠提示 */
+            backlight_set(10);
+            robot_ui_set_face(ROBOT_FACE_SLEEPY);
+            robot_ui_set_status(ROBOT_STATUS_IDLE);
+            robot_ui_set_ai_reply("休息中...\n触摸唤醒");
             break;
         case MODE_ALARM:
-            /* 显示报警界面 */
+            /* 显示报警状态 */
+            robot_ui_set_face(ROBOT_FACE_ALARM);
+            robot_ui_set_status(ROBOT_STATUS_ALARM);
+            robot_ui_set_ai_reply("紧急情况！\n请保持冷静");
             break;
         default:
+            /* MODE_NORMAL: 恢复正常亮度 */
+            backlight_set(user_settings.brightness);
+            robot_ui_set_face(ROBOT_FACE_HAPPY);
+            robot_ui_set_status(ROBOT_STATUS_IDLE);
+            robot_ui_set_ai_reply("你好！我是智爱陪伴\n有什么可以帮你的吗？");
             break;
     }
 }
@@ -2066,6 +2095,14 @@ void touch_ui_voice_chat_round_done(void)
 void touch_ui_voice_chat_stop_timer(void)
 {
     voice_stop_timer();
+}
+
+/* ==================== 语音聊天结束 ==================== */
+
+/* 退出语音聊天模式，恢复主界面状态 */
+void touch_ui_exit_voice_chat(void)
+{
+    touch_ui_set_mode(MODE_NORMAL);
 }
 
 /* ==================== 关怀确认面板 ==================== */

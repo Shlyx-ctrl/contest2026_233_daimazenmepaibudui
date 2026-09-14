@@ -57,6 +57,7 @@ static mqtt_msg_callback_t mqtt_callback = NULL;
 static wifi_status_callback_t wifi_callback = NULL;
 static alarm_callback_t alarm_callback = NULL;
 static ai_command_callback_t ai_command_callback = NULL;
+static device_state_callback_t device_state_callback = NULL;
 
 /* 心跳定时器 */
 static uint32_t last_heartbeat_time = 0;
@@ -66,8 +67,8 @@ static uint32_t last_heartbeat_time = 0;
  * 在被高频重连后会连上就 RESET、不给 CONNACK），所以连不上就自动换下一台。
  */
 static const char *g_mqtt_broker_list[] = {
-    "broker.emqx.io",
     "test.mosquitto.org",
+    "broker.emqx.io",
     "broker.hivemq.com",
 };
 #define MQTT_NBROKERS ((int)(sizeof(g_mqtt_broker_list) / sizeof(g_mqtt_broker_list[0])))
@@ -308,6 +309,10 @@ int mqtt_connect(const char *broker, uint16_t port,
     snprintf(topic, sizeof(topic), "zhi_ai/%s/command", client_id);
     mqtt_subscribe(topic, 1);
 
+    /* 订阅设备状态回执主题 */
+    snprintf(topic, sizeof(topic), "zhi_ai/%s/device_state", client_id);
+    mqtt_subscribe(topic, 1);
+
     return 0;
 }
 
@@ -514,6 +519,11 @@ void network_set_alarm_callback(alarm_callback_t callback)
 void network_set_ai_command_callback(ai_command_callback_t callback)
 {
     ai_command_callback = callback;
+}
+
+void network_set_device_state_callback(device_state_callback_t callback)
+{
+    device_state_callback = callback;
 }
 
 /* ==================== 手机推送接口 ==================== */
@@ -1691,7 +1701,31 @@ static int mqtt_parse_packet(void)
 
                 printf("Received: topic=%s, payload=%s\n", topic, payload);
 
-                /* 调用回调 */
+                /* 内部处理设备状态回执 */
+                if (strstr(topic, "/device_state") != NULL) {
+                    cJSON *root = cJSON_Parse(payload);
+                    if (root) {
+                        cJSON *dev_id = cJSON_GetObjectItem(root, "device_id");
+                        cJSON *state  = cJSON_GetObjectItem(root, "state");
+                        cJSON *ok     = cJSON_GetObjectItem(root, "success");
+
+                        if (cJSON_IsString(dev_id) && cJSON_IsString(state) && ok) {
+                            printf("[Device] %s -> %s (%s)\n",
+                                   dev_id->valuestring,
+                                   state->valuestring,
+                                   cJSON_IsTrue(ok) ? "OK" : "FAIL");
+
+                            if (device_state_callback) {
+                                device_state_callback(dev_id->valuestring,
+                                                      state->valuestring,
+                                                      cJSON_IsTrue(ok));
+                            }
+                        }
+                        cJSON_Delete(root);
+                    }
+                }
+
+                /* 调用通用回调 */
                 if (mqtt_callback) {
                     mqtt_callback(topic, payload);
                 }
