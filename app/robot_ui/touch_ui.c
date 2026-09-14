@@ -46,9 +46,6 @@ static bool swipe_handled = false;
  *     现场表现就是"进了菜单回不去"。 */
 static menu_type_t current_menu_type = MENU_TYPE_MAIN;
 
-/* 当前菜单层级（用于返回按钮和右滑手势判断） */
-static menu_type_t current_menu_type = MENU_TYPE_MAIN;
-
 /* 当前状态 */
 static robot_mode_t current_mode = MODE_NORMAL;
 static settings_t user_settings = {
@@ -135,9 +132,6 @@ static void *g_voice_cancel_user_data = NULL;
 #define SETTINGS_FILE_MAGIC 0x5A414953  /* "ZAIS" */
 #define SETTINGS_FILE_VERSION 1
 
-/* 添加提醒面板静态变量 */
-static lv_obj_t *add_reminder_panel = NULL;
-
 /* ==================== 样式定义 ==================== */
 
 /* 老人友好样式 - 大字体、高对比度 */
@@ -192,8 +186,6 @@ static void reminder_delete_event_handler(lv_event_t *e);
 static void settings_save_to_file(void);
 static void settings_load_from_file(void);
 static void screen_gesture_event_handler(lv_event_t *e);
-static void add_reminder_confirm_handler(lv_event_t *e);
-static void create_add_reminder_panel(lv_obj_t *parent);
 
 /* 语音聊天弹窗内部函数 */
 static void voice_close_event_handler(lv_event_t *e);
