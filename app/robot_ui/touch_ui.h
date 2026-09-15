@@ -144,4 +144,12 @@ void touch_ui_hide_checkin(void);
 /* 给 lv_msgbox 加右上角「×」关闭按钮（不用 LVGL 内置符号字体，那不在本工程字库里） */
 void touch_ui_msgbox_add_close_x(lv_obj_t *mbox);
 
+/* ==================== 声音检测状态显示 ==================== */
+/* 显示声音检测结果（主线程调用，内部会 lv_async_call）
+ * label: 检测到的声音标签名称
+ * conf:  置信度 (0-1)
+ * exec_level: 执行级别 (0=忽略, 1=记录, 2=普通, 3=紧急)
+ */
+void touch_ui_show_sound_detect(const char *label, float conf, int exec_level);
+
 #endif /* TOUCH_UI_H */

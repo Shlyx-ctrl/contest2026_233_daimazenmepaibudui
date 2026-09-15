@@ -2270,3 +2270,117 @@ void touch_ui_hide_checkin(void)
     checkin_cb = NULL;
     checkin_cb_user_data = NULL;
 }
+
+/* ==================== 声音检测状态显示 ==================== */
+
+/* 声音状态弹窗（临时显示 3 秒后自动消失） */
+static lv_obj_t *sound_status_panel = NULL;
+static lv_obj_t *sound_status_lbl = NULL;
+static lv_obj_t *sound_status_icon = NULL;
+static lv_timer_t *sound_dismiss_timer = NULL;
+
+/* 颜色映射：执行级别 → 颜色 */
+static lv_color_t get_exec_level_color(int level) {
+    switch (level) {
+        case 3:  return lv_color_hex(0xF44336);  /* 紧急：红色 */
+        case 2:  return lv_color_hex(0xFF9800);  /* 普通：橙色 */
+        case 1:  return lv_color_hex(0x4CAF50);  /* 记录：绿色 */
+        default: return lv_color_hex(0x9E9E9E);  /* 忽略：灰色 */
+    }
+}
+
+/* 图标映射 */
+static const char* get_sound_icon(const char *label) {
+    if (strstr(label, "跌倒"))  return LV_SYMBOL_WARNING;
+    if (strstr(label, "尖叫"))  return LV_SYMBOL_WARNING;
+    if (strstr(label, "咳嗽"))  return LV_SYMBOL_AUDIO;
+    if (strstr(label, "脚步"))  return LV_SYMBOL_AUDIO;
+    if (strstr(label, "开门"))  return LV_SYMBOL_HOME;
+    if (strstr(label, "水流"))  return LV_SYMBOL_DROPLET;
+    return LV_SYMBOL_AUDIO;
+}
+
+/* 自动隐藏定时器回调 */
+static void sound_dismiss_timer_cb(lv_timer_t *timer) {
+    if (sound_status_panel) {
+        lv_obj_del(sound_status_panel);
+        sound_status_panel = NULL;
+        sound_status_lbl = NULL;
+        sound_status_icon = NULL;
+    }
+    if (sound_dismiss_timer) {
+        lv_timer_del(sound_dismiss_timer);
+        sound_dismiss_timer = NULL;
+    }
+    (void)timer;
+}
+
+/* 异步创建声音状态弹窗（投递到 LVGL 线程） */
+typedef struct {
+    char label[32];
+    float conf;
+    int exec_level;
+} sound_detect_msg_t;
+
+static void show_sound_detect_async(void *data) {
+    sound_detect_msg_t *msg = (sound_detect_msg_t *)data;
+
+    /* 如果已有弹窗，先删掉 */
+    if (sound_status_panel) {
+        lv_obj_del(sound_status_panel);
+        sound_status_panel = NULL;
+    }
+    if (sound_dismiss_timer) {
+        lv_timer_del(sound_dismiss_timer);
+        sound_dismiss_timer = NULL;
+    }
+
+    /* 创建弹窗 */
+    sound_status_panel = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(sound_status_panel, 200, 100);
+    lv_obj_align(sound_status_panel, LV_ALIGN_TOP_MID, 0, 50);
+    lv_obj_set_style_bg_color(sound_status_panel, lv_color_hex(0x212121), 0);
+    lv_obj_set_style_bg_opa(sound_status_panel, LV_OPA_90, 0);
+    lv_obj_set_style_radius(sound_status_panel, 15, 0);
+    lv_obj_set_style_border_width(sound_status_panel, 0, 0);
+    lv_obj_set_style_pad_all(sound_status_panel, 15, 0);
+    lv_obj_set_flex_flow(sound_status_panel, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(sound_status_panel, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    /* 图标 */
+    sound_status_icon = lv_label_create(sound_status_panel);
+    lv_label_set_text(sound_status_icon, get_sound_icon(msg->label));
+    lv_obj_set_style_text_color(sound_status_icon,
+                                get_exec_level_color(msg->exec_level), 0);
+    lv_obj_set_style_text_font(sound_status_icon, &lv_font_ui_24, 0);
+
+    /* 标签文字 */
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%s %.0f%%", msg->label, msg->conf * 100);
+    sound_status_lbl = lv_label_create(sound_status_panel);
+    lv_label_set_text(sound_status_lbl, buf);
+    lv_obj_set_style_text_color(sound_status_lbl, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(sound_status_lbl, &lv_font_ui_16, 0);
+
+    /* 3 秒后自动隐藏 */
+    sound_dismiss_timer = lv_timer_create(sound_dismiss_timer_cb, 3000, NULL);
+    lv_timer_set_repeat_count(sound_dismiss_timer, 1);
+
+    free(msg);
+}
+
+/* 主线程调用此函数显示声音检测结果 */
+void touch_ui_show_sound_detect(const char *label, float conf, int exec_level) {
+    if (!label) return;
+
+    sound_detect_msg_t *msg = malloc(sizeof(sound_detect_msg_t));
+    if (!msg) return;
+
+    strncpy(msg->label, label, sizeof(msg->label) - 1);
+    msg->label[sizeof(msg->label) - 1] = '\0';
+    msg->conf = conf;
+    msg->exec_level = exec_level;
+
+    lv_async_call(show_sound_detect_async, msg);
+}
