@@ -1,0 +1,22 @@
+{
+  "labels": [
+    "cough",
+    "door",
+    "fall",
+    "footsteps",
+    "noise",
+    "other",
+    "scream",
+    "water"
+  ],
+  "idx2label": {
+    "0": "cough",
+    "1": "door",
+    "2": "fall",
+    "3": "footsteps",
+    "4": "noise",
+    "5": "other",
+    "6": "scream",
+    "7": "water"
+  }
+}
