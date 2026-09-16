@@ -29,6 +29,9 @@ extern "C" {
 #define SOUND_DURATION_SEC      3
 #define SOUND_BUFFER_SIZE       (SOUND_SAMPLE_RATE * SOUND_DURATION_SEC)
 #define SOUND_MFCC_COEFFS       40
+#define SOUND_N_MFCC            40      /* MFCC 系数数量 */
+#define SOUND_N_FFT             512     /* FFT 窗口大小 */
+#define SOUND_N_CHANNELS        3       /* MFCC + delta + delta2 */
 #define SOUND_FEATURE_CHANNELS  3   /* MFCC + delta + delta2 */
 #define SOUND_FRAME_SIZE        512
 #define SOUND_HOP_SIZE          256
