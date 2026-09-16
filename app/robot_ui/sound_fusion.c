@@ -1,12 +1,12 @@
 /*
- * sound_fusion.c - 声音融合决策
+ * sound_fusion.c - 声音融合决策（使用 TTS 预缓存）
  */
 
 #include "sound_fusion.h"
+#include "sound_tts_cache.h"
 #include <stdio.h>
 #include <string.h>
 
-/* 置信度阈值 */
 static float get_threshold(int label) {
     return (label == SOUND_LABEL_FALL) ? CONF_THRESHOLD_FALL : CONF_THRESHOLD_LOG;
 }
@@ -19,7 +19,6 @@ static exec_level_t get_exec_level(float conf, int label) {
     return EXEC_URGENT;
 }
 
-/* 时间窗口投票 */
 static int time_window_vote(sound_fusion_t *ctx, int new_label) {
     ctx->history[ctx->history_idx] = new_label;
     ctx->history_idx = (ctx->history_idx + 1) % FUSION_HISTORY_SIZE;
@@ -50,9 +49,10 @@ static void fall_fsm(sound_fusion_t *ctx, int label, float conf,
             ctx->fall_state = FALL_SUSPECTED;
             ctx->fall_time_ms = now_ms;
             ctx->fall_votes = 1;
-            /* 标记需要 TTS（调用者负责异步请求） */
-            out->need_tts = true;
-            out->tts_text = "您还好吗？请回答";
+
+            /* 方案3: 提前请求 TTS（不播放，只是准备） */
+            tts_cache_request(TTS_ID_FALL_ASK, "您还好吗？请回答");
+            printf("[Fusion] 疑似跌倒，提前请求 TTS\n");
         }
         break;
 
@@ -61,7 +61,9 @@ static void fall_fsm(sound_fusion_t *ctx, int label, float conf,
 
         if (now_ms - ctx->fall_time_ms > FUSION_FALL_TIMEOUT_MS) {
             if (ctx->fall_votes >= 2) {
-                /* 确认跌倒 */
+                /* 确认跌倒 → 播放预缓存语音（0延迟） */
+                out->need_tts = true;
+                out->tts_id = TTS_ID_FALL_ASK;
                 out->need_alarm = true;
                 out->alarm_msg = "检测到跌倒！正在呼叫紧急联系人...";
                 ctx->fall_alarm_count++;
@@ -71,7 +73,6 @@ static void fall_fsm(sound_fusion_t *ctx, int label, float conf,
         break;
 
     case FALL_CONFIRMING:
-        /* 用户回应后，由外部调用 sound_fusion_user_responded() */
         break;
     }
 }
@@ -105,7 +106,6 @@ void sound_fusion_decide(sound_fusion_t *ctx,
 
     ctx->total_detections++;
 
-    /* 时间窗口投票 */
     int voted = time_window_vote(ctx, result->label);
     if (voted >= 0 && voted != result->label) {
         out->label = voted;
@@ -113,11 +113,9 @@ void sound_fusion_decide(sound_fusion_t *ctx,
         out->vote_count = 3;
     }
 
-    /* 跌倒特殊处理 */
     if (out->label == SOUND_LABEL_FALL || result->label == SOUND_LABEL_FALL) {
         fall_fsm(ctx, result->label, result->confidence, now_ms, out);
     }
 
-    /* 统计 */
     if (out->exec_level == EXEC_URGENT) ctx->urgent_count++;
 }
