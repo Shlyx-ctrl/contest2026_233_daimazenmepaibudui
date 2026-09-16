@@ -1,0 +1,22 @@
+{
+  "labels": [
+    "cough",
+    "door",
+    "fall",
+    "footsteps",
+    "noise",
+    "other",
+    "scream",
+    "water"
+  ],
+  "num_classes": 8,
+  "mode": "mfcc",
+  "sample_rate": 16000,
+  "duration": 3.0,
+  "n_mfcc": 40,
+  "n_mels": null,
+  "best_accuracy": 56.75675675675676,
+  "total_params": 620296,
+  "train_samples": 1184,
+  "val_samples": 296
+}
