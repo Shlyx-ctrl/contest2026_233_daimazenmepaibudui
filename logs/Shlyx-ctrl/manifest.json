@@ -1,8 +1,33 @@
 {
-  "github_login": "Shlyx-ctrl",
+  "schema_version": "1.0",
   "team_id": "contest2026_233_daimazenmepaibudui",
-  "collector_installed": "2026-09-19",
-  "logs_source": "JSONL session transcripts + git history",
-  "date_range": "2026-08-26 ~ 2026-09-19",
-  "total_days": 18
+  "github_login": "Shlyx-ctrl",
+  "generator": "claude-code-collector@1.3.0",
+  "updated_at": "2026-09-19T11:09:29.717Z",
+  "sessions": [
+    {
+      "session_id": "0e3f0fa9-2ce4-496f-a9c9-f1d3f5c830e3",
+      "tool": "claude-code",
+      "started_at": "2026-09-09T03:54:45.069Z",
+      "last_event_at": "2026-09-19T11:08:40.130Z",
+      "event_count": 12620,
+      "raw_event_count": 21567,
+      "file_path": "logs/Shlyx-ctrl/2026-09-19/claude-code__0e3f0fa9-2ce4-496f-a9c9-f1d3f5c830e3.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "mimo-v2.5"
+    },
+    {
+      "session_id": "3e816775-8d52-4534-886b-b344cb84339d",
+      "tool": "claude-code",
+      "started_at": "2026-08-26T15:06:32.888Z",
+      "last_event_at": "2026-09-19T11:09:29.697Z",
+      "event_count": 931,
+      "raw_event_count": 2017,
+      "file_path": "logs/Shlyx-ctrl/2026-09-19/claude-code__3e816775-8d52-4534-886b-b344cb84339d.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "mimo-v2.5"
+    }
+  ]
 }
