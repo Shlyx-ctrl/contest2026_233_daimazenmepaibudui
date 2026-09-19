@@ -2,5 +2,7 @@
   "github_login": "Shlyx-ctrl",
   "team_id": "contest2026_233_daimazenmepaibudui",
   "collector_installed": "2026-09-19",
-  "logs_source": "git history reconstruction + raw JSONL"
+  "logs_source": "JSONL session transcripts + git history",
+  "date_range": "2026-08-30 ~ 2026-09-19",
+  "total_days": 14
 }
